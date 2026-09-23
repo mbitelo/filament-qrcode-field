@@ -86,7 +86,7 @@
         class="fi-qrcode-scanner"
     >
         <div class="fi-qrcode-scanner-viewport" x-show="!errorMessage">
-            <video x-ref="video" muted playsinline autoplay class="fi-qrcode-scanner-video"></video>
+            <video x-ref="video" muted playsinline class="fi-qrcode-scanner-video"></video>
 
             <div
                 class="fi-qrcode-scanner-frame"

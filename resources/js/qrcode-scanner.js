@@ -46,6 +46,7 @@ export function qrCodeScannerFormComponent({
         errorMessage: null,
         codeReader: null,
         zxing: null,
+        stream: null,
 
         init() {
             this.hasResult = Boolean(this.state);
@@ -54,15 +55,29 @@ export function qrCodeScannerFormComponent({
         },
 
         async startCamera() {
+            // Guards against ever running two concurrent camera sessions on
+            // the same component instance (which would fight over the same
+            // <video> element and cause "It was not possible to play the
+            // video." warnings from ZXing).
+            if (this.stream) {
+                return;
+            }
+
             this.isInitializing = true;
             this.errorMessage = null;
 
             try {
                 this.zxing = await loadZXing();
+
+                this.stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: { facingMode: { ideal: this.facingMode } },
+                });
+
                 this.codeReader = new this.zxing.BrowserMultiFormatReader();
 
-                await this.codeReader.decodeFromConstraints(
-                    { audio: false, video: { facingMode: { ideal: this.facingMode } } },
+                await this.codeReader.decodeFromStream(
+                    this.stream,
                     this.$refs.video,
                     (result, error) => this.handleDecodeResult(result, error),
                 );
@@ -95,7 +110,9 @@ export function qrCodeScannerFormComponent({
             this.hasResult = true;
             this.state = value;
 
-            this.stopScanning();
+            // No reason to keep the camera running once we have a result,
+            // whether or not the action is about to auto-submit.
+            this.stopCamera();
 
             if (this.autoSubmit) {
                 this.$nextTick(() => this.$wire.callMountedAction());
@@ -110,19 +127,32 @@ export function qrCodeScannerFormComponent({
             this.startCamera();
         },
 
-        stopScanning() {
-            this.codeReader?.reset();
-        },
-
         stopCamera() {
-            this.stopScanning();
+            this.codeReader?.reset();
+            this.codeReader = null;
+
+            if (this.stream) {
+                this.stream.getTracks().forEach((track) => track.stop());
+                this.stream = null;
+            }
 
             const video = this.$refs.video;
 
-            if (video?.srcObject) {
-                video.srcObject.getTracks().forEach((track) => track.stop());
+            if (video) {
                 video.srcObject = null;
             }
+        },
+
+        // Alpine calls this automatically once this component's root element
+        // is removed from the DOM (e.g. when the action's modal unmounts
+        // after a successful submission) - this is the one cleanup path
+        // that's guaranteed to run regardless of *how* the modal closed, so
+        // it's what we rely on primarily. The `modal-closed` /
+        // `close-modal-quietly` window listeners in the Blade view exist on
+        // top of this only to turn the camera off a little earlier, while
+        // the closing animation is still playing.
+        destroy() {
+            this.stopCamera();
         },
 
         handleError(error) {

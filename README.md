@@ -163,6 +163,15 @@ changes this rewrite deals with:
   plain `window.qrCodeScannerFormComponent = ...` assignment (which is how most other
   Filament-adjacent packages, and the original v3 field, expose Alpine components) is not enough,
   and silently breaks the component (Alpine ends up throwing `callback.bind is not a function`).
+- **The camera is released via Alpine's `destroy()` lifecycle hook**, not just a window event
+  listener. When a successful action submission unmounts the modal, Livewire removes the
+  scanner's DOM node as part of the same update that dispatches its "modal closed" browser
+  events - which can leave a plain `x-on:...window` listener race-destroyed before it ever fires
+  (the camera would then keep running in the background). `destroy()` is called directly by
+  Alpine whenever the component's root element is removed from the DOM, regardless of what
+  triggered the removal or in what order, so that's what actually stops the camera; the window
+  event listeners are kept on top of it only to turn the camera off a little earlier, while a
+  modal's closing animation is still playing.
 
 ## Security
 
