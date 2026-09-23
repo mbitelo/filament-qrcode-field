@@ -5,7 +5,6 @@ namespace Fadlee\FilamentQrCodeField\Actions;
 use Closure;
 use Fadlee\FilamentQrCodeField\Forms\Components\QrCodeScanner;
 use Filament\Actions\Action;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
@@ -34,13 +33,15 @@ class ScanQrCodeAction extends Action
         $this->modalSubmitActionLabel(__('Use code'));
         $this->modalCancelActionLabel(__('Cancel'));
 
-        // The submit button stays disabled until a code has actually been
-        // scanned, since submitting the action is what runs `->action()`.
-        $this->modalSubmitAction(
-            fn (Action $action): Action => $action->disabled(
-                fn (Get $get): bool => blank($get($this->getResultFieldName())),
-            ),
-        );
+        // Note: we deliberately don't try to disable the modal's submit
+        // button based on whether a code has been scanned yet. The submit
+        // button is a standalone footer action with no schema component of
+        // its own, so a `disabled(fn (Get $get) => ...)` closure on it
+        // cannot resolve `$get` (Filament tries to build it from the
+        // button's own, nonexistent, schema component and throws). The
+        // `->required()` validation on the scanner field below already
+        // blocks an empty manual submission; auto-submit covers the happy
+        // path without the user ever touching that button.
 
         $this->schema(fn (): array => [
             QrCodeScanner::make($this->getResultFieldName())
