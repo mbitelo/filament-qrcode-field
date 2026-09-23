@@ -1,5 +1,5 @@
 {
-    "name": "fadlee/filament-qrcode-field",
+    "name": "mbitelo/filament-qrcode-field",
     "keywords": [
         "filament",
         "filament-plugin",
@@ -7,7 +7,12 @@
         "qrcode",
         "barcode-scanner"
     ],
-    "description": "QR code scanner Action (and form field) for Filament",
+    "description": "QR code scanner Action (and form field) for Filament v4/v5",
+    "homepage": "https://github.com/mbitelo/filament-qrcode-field",
+    "support": {
+        "issues": "https://github.com/mbitelo/filament-qrcode-field/issues",
+        "source": "https://github.com/mbitelo/filament-qrcode-field"
+    },
     "type": "library",
     "license": "MIT",
     "autoload": {

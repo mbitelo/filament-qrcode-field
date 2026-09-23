@@ -28,9 +28,44 @@ below for details.
 
 ## Installation
 
+This package isn't published on Packagist, so point Composer at the GitHub repository directly by
+adding a `vcs` repository to your **application's** `composer.json` (not this package's):
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/mbitelo/filament-qrcode-field"
+        }
+    ]
+}
+```
+
+Then require it (replace `dev-main` with whatever the default branch is called, or a tag once you
+push one):
+
 ```bash
-composer require fadlee/filament-qrcode-field
+composer require mbitelo/filament-qrcode-field:dev-main
 php artisan filament:assets
+```
+
+If you're actively developing the package locally instead, use a `path` repository pointing at
+your local clone (add `"options": {"symlink": true}` so edits are picked up immediately, no
+`composer update` needed) instead of the `vcs` one above:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../filament-qrcode-field",
+            "options": {
+                "symlink": true
+            }
+        }
+    ]
+}
 ```
 
 ## Usage: as an Action (recommended)
