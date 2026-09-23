@@ -91,7 +91,10 @@ ScanQrCodeAction::make()
 
 If you disable `->autoSubmit(false)`, the scanned value is shown with a "Scan again" button and
 the user has to click the modal's confirm button themselves (useful if you want them to double
-check the value before it's used).
+check the value before it's used). When `autoSubmit` is enabled (the default), neither of those
+is shown - the modal's submit button is hidden entirely (there's nothing to click), and the
+scanner doesn't display the scanned value or a "Scan again" option, since the modal is expected
+to close on its own the instant a code is read.
 
 ## Usage: as a standalone form field
 
@@ -172,6 +175,25 @@ changes this rewrite deals with:
   triggered the removal or in what order, so that's what actually stops the camera; the window
   event listeners are kept on top of it only to turn the camera off a little earlier, while a
   modal's closing animation is still playing.
+- **The camera stream is acquired and owned by our own code**, not handed to ZXing via
+  `decodeFromConstraints()` / `decodeFromStream()`. We call `getUserMedia()` ourselves, keep the
+  only reference to the resulting `MediaStream`, and only ask ZXing to decode frames from an
+  already-attached `<video>` element (`decodeFromVideoElementContinuously()`). This means
+  `stopCamera()` never depends on ZXing's own internal bookkeeping of "its" stream, which is
+  where earlier iterations of this fix still occasionally left the camera running. It also
+  guards against a real race condition: if the modal is closed while `getUserMedia()` is still
+  pending, the stream is released the instant it resolves instead of being attached.
+
+## Known cosmetic warning
+
+You may see `It was not possible to play the video.` logged to the console by the ZXing library
+itself. This comes from ZXing's own internal video-preparation code (it unconditionally sets the
+`autoplay` attribute back onto the `<video>` element and separately calls `.play()` on it), and is
+caught and merely logged by ZXing - it is not thrown, and does not affect scanning. We deliberately
+do not call `video.play()` ourselves to work around it, because `decodeFromVideoElementContinuously()`
+only starts decoding once it sees a `playing` event fire, and playing the video ourselves first
+would mean that event never fires again, silently breaking scanning entirely. If this warning
+bothers you, it's safe to ignore.
 
 ## Security
 

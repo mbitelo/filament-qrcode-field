@@ -106,7 +106,7 @@
             <p class="fi-qrcode-scanner-status">{{ __('Point your camera at a QR code') }}</p>
         </template>
 
-        <template x-if="!errorMessage && hasResult">
+        <template x-if="!errorMessage && hasResult && !autoSubmit">
             <div class="fi-qrcode-scanner-result">
                 <p class="fi-qrcode-scanner-status">{{ __('Code detected') }}</p>
                 <p class="fi-qrcode-scanner-result-value" x-text="state"></p>

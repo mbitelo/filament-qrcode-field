@@ -33,6 +33,16 @@ class ScanQrCodeAction extends Action
         $this->modalSubmitActionLabel(__('Use code'));
         $this->modalCancelActionLabel(__('Cancel'));
 
+        // There is no point showing a submit button the user never needs to
+        // click. Note this only returns a plain `bool`/`Action`, it doesn't
+        // reference `Get`: the modal's submit button is a standalone footer
+        // action with no schema component of its own, so a closure that
+        // asked for `Get $get` here would fail the same way described below
+        // for `->required()`.
+        $this->modalSubmitAction(
+            fn (Action $action): Action | bool => $this->isAutoSubmitted() ? false : $action,
+        );
+
         // Note: we deliberately don't try to disable the modal's submit
         // button based on whether a code has been scanned yet. The submit
         // button is a standalone footer action with no schema component of

@@ -47,6 +47,7 @@ export function qrCodeScannerFormComponent({
         codeReader: null,
         zxing: null,
         stream: null,
+        isStarting: false,
 
         init() {
             this.hasResult = Boolean(this.state);
@@ -56,35 +57,59 @@ export function qrCodeScannerFormComponent({
 
         async startCamera() {
             // Guards against ever running two concurrent camera sessions on
-            // the same component instance (which would fight over the same
-            // <video> element and cause "It was not possible to play the
-            // video." warnings from ZXing).
-            if (this.stream) {
+            // the same component instance.
+            if (this.stream || this.isStarting) {
                 return;
             }
 
+            this.isStarting = true;
             this.isInitializing = true;
             this.errorMessage = null;
 
             try {
                 this.zxing = await loadZXing();
 
-                this.stream = await navigator.mediaDevices.getUserMedia({
+                const stream = await navigator.mediaDevices.getUserMedia({
                     audio: false,
                     video: { facingMode: { ideal: this.facingMode } },
                 });
 
-                this.codeReader = new this.zxing.BrowserMultiFormatReader();
+                // `stopCamera()` may have been called (e.g. the user closed
+                // the modal) while the getUserMedia() request above was
+                // still in flight. If so, `isStarting` was reset to `false`
+                // in the meantime - release this now-unwanted stream
+                // immediately instead of attaching it, or it would keep the
+                // camera on with nothing left to stop it.
+                if (!this.isStarting) {
+                    stream.getTracks().forEach((track) => track.stop());
 
-                await this.codeReader.decodeFromStream(
-                    this.stream,
-                    this.$refs.video,
+                    return;
+                }
+
+                this.stream = stream;
+
+                const video = this.$refs.video;
+                video.srcObject = this.stream;
+
+                // We intentionally do NOT call `video.play()` ourselves here:
+                // `decodeFromVideoElementContinuously()` below waits for its
+                // own `playing` event listener before it starts decoding, so
+                // playback must be the thing that triggers that event. If we
+                // played the video ourselves first, that listener would be
+                // attached after `playing` had already fired once and would
+                // then never fire again, and the scanner would silently never
+                // start decoding.
+                this.codeReader = new this.zxing.BrowserMultiFormatReader();
+                this.codeReader.decodeFromVideoElementContinuously(
+                    video,
                     (result, error) => this.handleDecodeResult(result, error),
                 );
 
                 this.isInitializing = false;
             } catch (error) {
                 this.handleError(error);
+            } finally {
+                this.isStarting = false;
             }
         },
 
@@ -128,6 +153,12 @@ export function qrCodeScannerFormComponent({
         },
 
         stopCamera() {
+            // Cancels any `startCamera()` call that might still be in
+            // flight (see the `isStarting` check above), so a stream that
+            // finishes resolving *after* this point gets released instead
+            // of attached.
+            this.isStarting = false;
+
             this.codeReader?.reset();
             this.codeReader = null;
 
@@ -139,6 +170,7 @@ export function qrCodeScannerFormComponent({
             const video = this.$refs.video;
 
             if (video) {
+                video.pause();
                 video.srcObject = null;
             }
         },
