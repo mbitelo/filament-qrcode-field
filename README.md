@@ -210,14 +210,19 @@ changes this rewrite deals with:
   triggered the removal or in what order, so that's what actually stops the camera; the window
   event listeners are kept on top of it only to turn the camera off a little earlier, while a
   modal's closing animation is still playing.
-- **The video fades in only once it's actually ready**, instead of being visible from the moment
-  the stream connects. On mobile, a rear camera often starts by delivering frames in its native
-  aspect ratio (e.g. a tall 9:16) before settling into whatever the browser negotiates - since the
-  viewport is a fixed square (`object-fit: cover`), showing the video immediately could produce a
-  visible "flick" as it resizes/crops into place. We also hint `aspectRatio: { ideal: 1 }` in the
-  `getUserMedia()` constraints so the camera has less resizing to do in the first place, but the
-  fade (gated on the video's own `playing` event, not just on `getUserMedia()` resolving) is what
-  actually hides that resize from the user.
+- **The visible square is a `<canvas>` we draw into ourselves, not the `<video>` element with CSS
+  `object-fit: cover`.** On mobile - especially rear cameras - the stream's actual
+  resolution/aspect ratio can keep changing for a moment after playback starts (autofocus,
+  exposure, or the OS swapping to a higher-quality feed), and each of those changes showed up as
+  a visible "flick" as `object-fit` re-applied itself, sometimes more than once. The `<video>`
+  element is now only ever used as a hidden source, for both ZXing's decoding and our own
+  `drawImage()` calls; every animation frame, we compute a centered square crop directly from
+  `video.videoWidth` / `video.videoHeight` and draw that onto the canvas. However many times the
+  underlying stream's dimensions change, there's nothing to visibly "snap" - the next frame is
+  simply drawn correctly. We also hint `aspectRatio: { ideal: 1 }` in the `getUserMedia()`
+  constraints so there's less to crop out in the first place, but the canvas is what actually
+  guarantees a clean square with no flicker, regardless of what any given device/browser does
+  with `object-fit` timing.
   `decodeFromConstraints()` / `decodeFromStream()`. We call `getUserMedia()` ourselves, keep the
   only reference to the resulting `MediaStream`, and only ask ZXing to decode frames from an
   already-attached `<video>` element (`decodeFromVideoElementContinuously()`). This means
