@@ -71,7 +71,15 @@ export function qrCodeScannerFormComponent({
 
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: false,
-                    video: { facingMode: { ideal: this.facingMode } },
+                    video: {
+                        facingMode: { ideal: this.facingMode },
+                        // Hints the camera to negotiate something closer to
+                        // our square viewport up front, so `object-fit: cover`
+                        // below has less cropping/resizing left to do once
+                        // the stream connects (mobile rear cameras otherwise
+                        // often start at a native 9:16-ish ratio).
+                        aspectRatio: { ideal: 1 },
+                    },
                 });
 
                 // `stopCamera()` may have been called (e.g. the user closed
@@ -91,6 +99,23 @@ export function qrCodeScannerFormComponent({
                 const video = this.$refs.video;
                 video.srcObject = this.stream;
 
+                // `isInitializing` only clears once the video is actually
+                // rendering frames (not just as soon as we've asked ZXing to
+                // start decoding) - this is also what the video's opacity is
+                // bound to in the Blade view, so the viewport stays hidden
+                // while the stream is still negotiating its real size/aspect
+                // ratio, and only fades in once it has settled. That avoids
+                // a visible "flick" between the camera's native aspect ratio
+                // and the square viewport, which is especially noticeable on
+                // mobile rear cameras.
+                video.addEventListener(
+                    'playing',
+                    () => {
+                        this.isInitializing = false;
+                    },
+                    { once: true },
+                );
+
                 // We intentionally do NOT call `video.play()` ourselves here:
                 // `decodeFromVideoElementContinuously()` below waits for its
                 // own `playing` event listener before it starts decoding, so
@@ -104,8 +129,6 @@ export function qrCodeScannerFormComponent({
                     video,
                     (result, error) => this.handleDecodeResult(result, error),
                 );
-
-                this.isInitializing = false;
             } catch (error) {
                 this.handleError(error);
             } finally {

@@ -26,6 +26,12 @@
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
+                opacity: 0;
+                transition: opacity 200ms ease;
+            }
+
+            .fi-qrcode-scanner-video-ready {
+                opacity: 1;
             }
 
             .fi-qrcode-scanner-frame {
@@ -86,7 +92,13 @@
         class="fi-qrcode-scanner"
     >
         <div class="fi-qrcode-scanner-viewport" x-show="!errorMessage">
-            <video x-ref="video" muted playsinline class="fi-qrcode-scanner-video"></video>
+            <video
+                x-ref="video"
+                muted
+                playsinline
+                class="fi-qrcode-scanner-video"
+                x-bind:class="{ 'fi-qrcode-scanner-video-ready': !isInitializing }"
+            ></video>
 
             <div
                 class="fi-qrcode-scanner-frame"

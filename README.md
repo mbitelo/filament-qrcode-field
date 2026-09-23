@@ -210,7 +210,14 @@ changes this rewrite deals with:
   triggered the removal or in what order, so that's what actually stops the camera; the window
   event listeners are kept on top of it only to turn the camera off a little earlier, while a
   modal's closing animation is still playing.
-- **The camera stream is acquired and owned by our own code**, not handed to ZXing via
+- **The video fades in only once it's actually ready**, instead of being visible from the moment
+  the stream connects. On mobile, a rear camera often starts by delivering frames in its native
+  aspect ratio (e.g. a tall 9:16) before settling into whatever the browser negotiates - since the
+  viewport is a fixed square (`object-fit: cover`), showing the video immediately could produce a
+  visible "flick" as it resizes/crops into place. We also hint `aspectRatio: { ideal: 1 }` in the
+  `getUserMedia()` constraints so the camera has less resizing to do in the first place, but the
+  fade (gated on the video's own `playing` event, not just on `getUserMedia()` resolving) is what
+  actually hides that resize from the user.
   `decodeFromConstraints()` / `decodeFromStream()`. We call `getUserMedia()` ourselves, keep the
   only reference to the resulting `MediaStream`, and only ask ZXing to decode frames from an
   already-attached `<video>` element (`decodeFromVideoElementContinuously()`). This means
