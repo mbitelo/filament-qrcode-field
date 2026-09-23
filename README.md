@@ -154,6 +154,15 @@ changes this rewrite deals with:
 - **Camera lookup is now constraint-based.** Instead of enumerating devices up front and guessing
   the rear camera from its label, the scanner uses the standard
   `{ video: { facingMode: { ideal: ... } } }` constraint, which is more reliable across devices/browsers.
+- **The JS asset is loaded as a real ES module.** Filament's `x-load` / `x-load-src` directives
+  (used to lazily load the scanner's JS only when it's actually needed) are powered by the
+  [Async Alpine](https://async-alpine.dev/) package, which dynamically `import()`s the file
+  pointed to by `x-load-src` and looks for an export matching the function name used in
+  `x-data="qrCodeScannerFormComponent(...)"`, then registers it itself via `Alpine.data(...)`.
+  Because of that, `resources/js/qrcode-scanner.js` **must** `export` its component function - a
+  plain `window.qrCodeScannerFormComponent = ...` assignment (which is how most other
+  Filament-adjacent packages, and the original v3 field, expose Alpine components) is not enough,
+  and silently breaks the component (Alpine ends up throwing `callback.bind is not a function`).
 
 ## Security
 

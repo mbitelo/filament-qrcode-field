@@ -1,6 +1,6 @@
 // Alpine component used by `resources/views/components/qrcode-scanner.blade.php`.
-// Registered globally so it can be referenced from `x-data="qrCodeScannerFormComponent(...)"`
-// once this file has been lazy-loaded via Filament's `x-load` / `x-load-src` directives.
+// Lazy-loaded as an ES module via Filament's `x-load` / `x-load-src` directives (see the note
+// above the exported function below for exactly how that resolves this file's export).
 //
 // Unlike the Filament v3 version of this package, there is no `document.getElementById(...)`
 // lookup and no reliance on Alpine's internal `_x_model` API: the scanned value is written
@@ -22,7 +22,15 @@ function loadZXing() {
     return zxingPromise;
 }
 
-function qrCodeScannerFormComponent({
+// IMPORTANT: this file is loaded via Filament's `x-load` / `x-load-src` directives, which are
+// powered by the "Async Alpine" package. Async Alpine dynamically `import()`s this file as a
+// real ES module and looks for an export whose name matches the function referenced in
+// `x-data="qrCodeScannerFormComponent(...)"` (falling back to a default export, then to the
+// module's first export). It then registers that export via `Alpine.data(...)` itself - so the
+// function below MUST be an actual `export`, not just a global/window assignment, or Async
+// Alpine ends up registering `false` as the component and Alpine throws
+// "callback.bind is not a function" while trying to use it.
+export function qrCodeScannerFormComponent({
     state,
     autoSubmit = true,
     facingMode = 'environment',
@@ -138,5 +146,3 @@ function qrCodeScannerFormComponent({
         },
     };
 }
-
-window.qrCodeScannerFormComponent = qrCodeScannerFormComponent;
