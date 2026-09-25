@@ -4,6 +4,10 @@
     $facingMode = $field->getFacingMode();
     $noCameraMessage = $field->getNoCameraMessage();
     $cameraDeniedMessage = $field->getCameraDeniedMessage();
+    $capturesImage = $field->isCapturingImage();
+    $imageFormat = $field->getImageFormat();
+    $imageQuality = $field->getImageQuality();
+    $imageStatePath = $capturesImage ? $field->getImageStatePath() : null;
 @endphp
 
 <x-filament-forms::field-wrapper :field="$field">
@@ -25,12 +29,20 @@
                 inset: 0;
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .fi-qrcode-scanner-canvas {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
                 opacity: 0;
                 transition: opacity 200ms ease;
             }
 
-            .fi-qrcode-scanner-video-ready {
+            .fi-qrcode-scanner-canvas-ready {
                 opacity: 1;
             }
 
@@ -85,6 +97,12 @@
             facingMode: @js($facingMode),
             cameraDeniedMessage: @js($cameraDeniedMessage),
             noCameraMessage: @js($noCameraMessage),
+            capturesImage: @js($capturesImage),
+            imageFormat: @js($imageFormat),
+            imageQuality: @js($imageQuality),
+            @if ($capturesImage)
+            imageState: $wire.$entangle('{{ $imageStatePath }}'),
+            @endif
         })"
         x-init="init()"
         x-on:modal-closed.window="stopCamera()"
@@ -97,8 +115,13 @@
                 muted
                 playsinline
                 class="fi-qrcode-scanner-video"
-                x-bind:class="{ 'fi-qrcode-scanner-video-ready': !isInitializing }"
             ></video>
+
+            <canvas
+                x-ref="canvas"
+                class="fi-qrcode-scanner-canvas"
+                x-bind:class="{ 'fi-qrcode-scanner-canvas-ready': !isInitializing }"
+            ></canvas>
 
             <div
                 class="fi-qrcode-scanner-frame"

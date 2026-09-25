@@ -131,6 +131,34 @@ is shown - the modal's submit button is hidden entirely (there's nothing to clic
 scanner doesn't display the scanned value or a "Scan again" option, since the modal is expected
 to close on its own the instant a code is read.
 
+### Capturing a image of the scanned code
+
+```php
+use Fadlee\FilamentQrCodeField\Actions\ScanQrCodeAction;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+
+ScanQrCodeAction::make()
+    ->captureImage()
+    ->action(function (array $data) {
+        // $data['code']   -> the scanned value, as before
+        // $data['image'] -> a base64 data URI, e.g. "data:image/jpeg;base64,..."
+
+        Storage::disk('public')->put(
+            'scans/' . Str::uuid() . '.jpg',
+            base64_decode(Str::after($data['imagem'], ',')),
+        );
+    });
+```
+
+The image is a snapshot of exactly what was framed in the square viewport at the instant the code
+was read (captured from the same cropped square the user saw, not the camera's full raw frame).
+Customise the field name, format or compression with `->imageFieldName('foto')`,
+`->imageFormat('image/png')` or `->imageQuality(0.6)` (JPEG only, `0.0`-`1.0`, default `0.85`).
+Since the image is sent as base64 in the same request as the rest of the action's data, it adds
+some request size (typically tens of KB depending on format/quality) - it's opt-in for that
+reason, and off by default.
+
 ## Usage: as a standalone form field
 
 If you want the scanner embedded directly inside one of your own forms instead of a separate

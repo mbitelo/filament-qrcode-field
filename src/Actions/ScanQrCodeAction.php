@@ -5,6 +5,7 @@ namespace Fadlee\FilamentQrCodeField\Actions;
 use Closure;
 use Fadlee\FilamentQrCodeField\Forms\Components\QrCodeScanner;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Hidden;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 
@@ -15,6 +16,14 @@ class ScanQrCodeAction extends Action
     protected bool | Closure $isAutoSubmitted = true;
 
     protected string | Closure $facingMode = 'environment';
+
+    protected bool | Closure $capturesImage = false;
+
+    protected string | Closure $imageFieldName = 'image';
+
+    protected string | Closure $imageFormat = 'image/jpeg';
+
+    protected float | Closure $imageQuality = 0.85;
 
     public static function getDefaultName(): ?string
     {
@@ -57,7 +66,14 @@ class ScanQrCodeAction extends Action
             QrCodeScanner::make($this->getResultFieldName())
                 ->required()
                 ->autoSubmit($this->isAutoSubmitted())
-                ->facingMode($this->getFacingMode()),
+                ->facingMode($this->getFacingMode())
+                ->captureImage($this->isCapturingImage())
+                ->imageFieldName($this->getImageFieldName())
+                ->imageFormat($this->getImageFormat())
+                ->imageQuality($this->getImageQuality()),
+            ...($this->isCapturingImage() ? [
+                Hidden::make($this->getImageFieldName()),
+            ] : []),
         ]);
     }
 
@@ -118,5 +134,86 @@ class ScanQrCodeAction extends Action
     public function getFacingMode(): string
     {
         return $this->evaluate($this->facingMode);
+    }
+
+    /**
+     * When enabled, a snapshot of the camera at the moment the QR code was
+     * read is made available as a base64 data URI (e.g.
+     * `data:image/jpeg;base64,...`) under `$data[$imageFieldName]` (see
+     * `imageFieldName()`, default `'imagem'`):
+     *
+     * ScanQrCodeAction::make()
+     *     ->captureImage()
+     *     ->action(function (array $data) {
+     *         // $data['code'], $data['imagem']
+     *         Storage::put('scans/' . Str::uuid() . '.jpg', base64_decode(
+     *             Str::after($data['imagem'], ','),
+     *         ));
+     *     });
+     *
+     * Note this increases the size of the request made when the action is
+     * submitted - a captured image is typically tens of KB once base64
+     * encoded, depending on `imageFormat()` / `imageQuality()`.
+     */
+    public function captureImage(bool | Closure $condition = true): static
+    {
+        $this->capturesImage = $condition;
+
+        return $this;
+    }
+
+    public function isCapturingImage(): bool
+    {
+        return (bool) $this->evaluate($this->capturesImage);
+    }
+
+    /**
+     * The key under which the captured image will be available in `$data`.
+     * Only relevant when `->captureImage()` is enabled.
+     */
+    public function imageFieldName(string | Closure $name): static
+    {
+        $this->imageFieldName = $name;
+
+        return $this;
+    }
+
+    public function getImageFieldName(): string
+    {
+        return $this->evaluate($this->imageFieldName);
+    }
+
+    /**
+     * The image format the image is captured as: `image/jpeg` (the default)
+     * or `image/png`. PNG produces a larger payload with no quality loss;
+     * `imageQuality()` is ignored for it.
+     */
+    public function imageFormat(string | Closure $format): static
+    {
+        $this->imageFormat = $format;
+
+        return $this;
+    }
+
+    public function getImageFormat(): string
+    {
+        return $this->evaluate($this->imageFormat);
+    }
+
+    /**
+     * JPEG compression quality between `0.0` and `1.0` (default `0.85`).
+     * Lower values produce a smaller base64 payload at the cost of image
+     * quality. Ignored when `imageFormat()` is `image/png`.
+     */
+    public function imageQuality(float | Closure $quality): static
+    {
+        $this->imageQuality = $quality;
+
+        return $this;
+    }
+
+    public function getImageQuality(): float
+    {
+        return $this->evaluate($this->imageQuality);
     }
 }

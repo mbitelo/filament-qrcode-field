@@ -36,11 +36,19 @@ export function qrCodeScannerFormComponent({
     facingMode = 'environment',
     cameraDeniedMessage = 'Camera access was denied. Please allow camera access and try again.',
     noCameraMessage = 'No camera could be found on this device.',
+    capturesImage = false,
+    imageFormat = 'image/jpeg',
+    imageQuality = 0.85,
+    imageState = null,
 }) {
     return {
         state,
         autoSubmit,
         facingMode,
+        capturesImage,
+        imageFormat,
+        imageQuality,
+        imageState,
         isInitializing: true,
         hasResult: false,
         errorMessage: null,
@@ -254,6 +262,10 @@ export function qrCodeScannerFormComponent({
             this.hasResult = true;
             this.state = value;
 
+            if (this.capturesImage) {
+                this.imageState = this.captureImage();
+            }
+
             // No reason to keep the camera running once we have a result,
             // whether or not the action is about to auto-submit.
             this.stopCamera();
@@ -263,10 +275,29 @@ export function qrCodeScannerFormComponent({
             }
         },
 
+        captureImage() {
+            // The canvas already holds a correctly cropped square frame from
+            // the draw loop above (at most one animation frame old), so we
+            // capture directly from it rather than the <video> element -
+            // this guarantees the image matches exactly what the user saw
+            // framed in the viewport when the code was read.
+            try {
+                return this.$refs.canvas.toDataURL(this.imageFormat, this.imageQuality);
+            } catch (error) {
+                console.error(error);
+
+                return null;
+            }
+        },
+
         rescan() {
             this.hasResult = false;
             this.state = null;
             this.errorMessage = null;
+
+            if (this.capturesImage) {
+                this.imageState = null;
+            }
 
             this.startCamera();
         },
